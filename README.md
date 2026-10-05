@@ -74,9 +74,13 @@ pip install -e .
 gemini-mem install --ide antigravity
 ```
 
-### 3. Launch the Web Dashboard
+### 3. Launch the Background OS Daemon (or Web Dashboard)
 
 ```bash
+# Start as a detached background daemon (runs silently, never blocks chat or terminal)
+gemini-mem daemon start
+
+# Or run interactively in the foreground
 gemini-mem start
 ```
 
@@ -151,6 +155,11 @@ Add this to your MCP configuration (`mcp_config.json`):
 ## 💻 CLI Commands
 
 ```bash
+# Manage background OS daemon (independent of chat/terminal)
+gemini-mem daemon start
+gemini-mem daemon status
+gemini-mem daemon stop
+
 # Check memory database stats and Google Drive sync status
 gemini-mem status
 
