@@ -38,9 +38,14 @@ def main() -> None:
     install_p.add_argument("--ide", default="antigravity", choices=["antigravity", "gemini-cli", "cursor"], help="Target IDE")
 
     # 2. start
-    start_p = subparsers.add_parser("start", help="Start the Web Dashboard and background memory service")
+    start_p = subparsers.add_parser("start", help="Start the Web Dashboard in foreground")
     start_p.add_argument("--port", type=int, default=config.port, help="Port to bind dashboard")
     start_p.add_argument("--host", default=config.host, help="Host to bind dashboard")
+
+    # 2.1 daemon
+    daemon_p = subparsers.add_parser("daemon", help="Manage background OS daemon (independent of chat/terminal)")
+    daemon_p.add_argument("action", choices=["start", "stop", "status"], help="Daemon action")
+    daemon_p.add_argument("--port", type=int, default=config.port, help="Port to bind dashboard")
 
     # 3. status
     subparsers.add_parser("status", help="Check memory store status, statistics, and Google Drive sync")
@@ -94,6 +99,42 @@ def main() -> None:
 
     elif args.command == "start":
         run_dashboard(port=args.port, host=args.host)
+
+    elif args.command == "daemon":
+        pid_file = config.data_dir / "daemon.pid"
+        if args.action == "start":
+            import subprocess
+            py = sys.executable
+            cmd = [py, "-m", "gemini_mem.cli", "start", "--port", str(args.port)]
+            if sys.platform == "win32":
+                # DETACHED_PROCESS = 0x00000008, CREATE_NEW_PROCESS_GROUP = 0x00000200
+                flags = 0x00000008 | 0x00000200
+                p = subprocess.Popen(cmd, creationflags=flags, close_fds=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            else:
+                p = subprocess.Popen(cmd, start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            config.ensure_dirs()
+            pid_file.write_text(str(p.pid), encoding="utf-8")
+            print(f"🚀 gemini-mem daemon started in background (PID: {p.pid}) on http://{config.host}:{args.port}")
+
+        elif args.action == "stop":
+            if pid_file.exists():
+                try:
+                    pid = int(pid_file.read_text("utf-8").strip())
+                    import signal
+                    os.kill(pid, signal.SIGTERM)
+                    print(f"🛑 Stopped gemini-mem daemon (PID: {pid}).")
+                except Exception as e:
+                    print(f"⚠️ Could not stop process: {e}")
+                pid_file.unlink(missing_ok=True)
+            else:
+                print("ℹ️ No daemon PID file found.")
+
+        elif args.action == "status":
+            if pid_file.exists():
+                pid = pid_file.read_text("utf-8").strip()
+                print(f"🟢 gemini-mem daemon is running in background (PID: {pid}).")
+            else:
+                print("⚪ gemini-mem daemon is not running.")
 
     elif args.command == "status":
         stats = {
