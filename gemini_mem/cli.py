@@ -18,6 +18,14 @@ from gemini_mem.hooks.antigravity import install_antigravity_hooks, safe_post_to
 
 
 def main() -> None:
+    try:
+        if sys.stdout.encoding and sys.stdout.encoding.lower() not in ("utf-8", "utf8"):
+            sys.stdout.reconfigure(encoding="utf-8")
+        if sys.stderr.encoding and sys.stderr.encoding.lower() not in ("utf-8", "utf8"):
+            sys.stderr.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
     parser = argparse.ArgumentParser(
         prog="gemini-mem",
         description="Persistent Agent Memory & Knowledge Graph for Google AI & Gemini Advanced subscribers."
